@@ -7,8 +7,8 @@ GRAVITY = -9.8
 DAMPING = -0.3
 PYGAME_SCALE = 10
 
-SCREEN_HEIGHT = 960
-SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 960 - 200
+SCREEN_WIDTH = 1280 - 200
 
 class Spring:
     def __init__(self, node1, node2):
@@ -31,6 +31,13 @@ class Point:
             self.connected_points[other] = Spring(self, other)
         if self not in other.connected_points:
             other.connected_points[self] = Spring(other, self)
+
+class Shape:
+    def __init__(self, points, connections):
+        self.points = points
+        self.connections = connections
+
+        self.skeleton = {}
 
 
 def spring_physics(point1, point2, resting_length, dt, k):
@@ -85,15 +92,20 @@ class PhysicsEngine:
                     if event.key == pygame.K_0:
                         self.clear()
                     if event.key == pygame.K_SPACE:
+                        # spawn in a regular ball
                         mouse_pos = pygame.mouse.get_pos()
                         self.add_point(mouse_pos[0], mouse_pos[1], 20) # add a 20 radius point
+                    if event.key == pygame.K_l:
+                        # spawn in a tetris L shape
+                        mouse_pos == pygame.mouse.get_pos()
+                        self.add_l(mouse_pos[0], mouse_pos[1], 5) 
+                        
 
             self.screen.fill('white')
 
             dt = self.clock.tick(120) / 1000
 
             mouse_pos = pygame.mouse.get_pos()
-
             if grabbed_point:
                 dx = (mouse_pos[0] - prev_mouse_pos[0]) / PYGAME_SCALE
                 dy = (mouse_pos[1] - prev_mouse_pos[1]) / PYGAME_SCALE
@@ -106,7 +118,6 @@ class PhysicsEngine:
 
                 if speed > max_speed:
                     grabbed_point.vel = grabbed_point.vel / speed * max_speed
-
             prev_mouse_pos = mouse_pos
 
             # this is where the physics updates will go
@@ -140,10 +151,11 @@ class PhysicsEngine:
             for other in self.points:
                 if point == other:
                     continue
-                point.add_connected_point(other)
-                print(point.connected_points[other].resting_length)
-                resting_length = point.connected_points[other].resting_length
-                spring_physics(point, other, resting_length, dt, 0.5)
+                # point.add_connected_point(other)
+                # print(point.connected_points[other].resting_length)
+                if other in point.connected_points:
+                    resting_length = point.connected_points[other].resting_length
+                    spring_physics(point, other, resting_length, dt, 10) # im changing the k constant right here for now
 
             # Add forces and velocity
             point.vel += pygame.Vector2(0, -1) * GRAVITY * dt * PYGAME_SCALE
@@ -158,16 +170,67 @@ class PhysicsEngine:
                 self.screen.blit(label_surface, label_rect)
                 pygame.display.update()
             
-            pygame.draw.circle(self.screen, point.colour, point.pos, point.radius)
             for other in self.points:
                 if point == other:
                     continue
-                pygame.draw.line(self.screen, 'green', point.pos, other.pos)
+                if other in point.connected_points:
+                    pygame.draw.line(self.screen, 'green', point.pos, other.pos)
+            pygame.draw.circle(self.screen, point.colour, point.pos, point.radius)
             
     
     def add_point(self, x, y, r):
         point = Point(x, y, r)
         self.points.append(point)
+
+    def add_l(self, x, y, size):
+        p1 = Point(x, y, r=5)
+        p2 = Point(x + size * PYGAME_SCALE, y, r=5)
+        p3 = Point(x, y + size * PYGAME_SCALE, r=5)
+        p4 = Point(x + size * PYGAME_SCALE, y + size * PYGAME_SCALE, r=5)
+        p1.add_connected_point(p2)
+        p1.add_connected_point(p3)
+        p1.add_connected_point(p4)
+        p2.add_connected_point(p3)
+        p2.add_connected_point(p4)
+        p3.add_connected_point(p4)
+
+        p5 = Point(x, y + size * 2 * PYGAME_SCALE, r=5)
+        p6 = Point(x + size * PYGAME_SCALE, y + size * 2 * PYGAME_SCALE, r=5)
+
+        p5.add_connected_point(p3)
+        p5.add_connected_point(p4)
+        p5.add_connected_point(p6)
+        p6.add_connected_point(p3)
+        p6.add_connected_point(p4)
+
+        p7 = Point(x, y + size * 3 * PYGAME_SCALE, r=5)
+        p8 = Point(x + size * PYGAME_SCALE, y + size * 3 * PYGAME_SCALE, r=5)
+
+        p7.add_connected_point(p5)
+        p7.add_connected_point(p6)
+        p7.add_connected_point(p8)
+        p8.add_connected_point(p5)
+        p8.add_connected_point(p6)
+
+        p9 = Point(x + size * 2 * PYGAME_SCALE, y + size * 2 * PYGAME_SCALE, r=5)
+        p10 = Point(x + size * 2 * PYGAME_SCALE, y + size * 3 * PYGAME_SCALE, r=5)
+
+        p9.add_connected_point(p6)
+        p9.add_connected_point(p8)
+        p9.add_connected_point(p10)
+        p10.add_connected_point(p6)
+        p10.add_connected_point(p8)
+
+        self.points.append(p1)
+        self.points.append(p2)
+        self.points.append(p3)
+        self.points.append(p4)
+        self.points.append(p5)
+        self.points.append(p6)
+        self.points.append(p7)
+        self.points.append(p8)
+        self.points.append(p9)
+        self.points.append(p10)
 
     def toggle_debug(self):
         if self.debug:
